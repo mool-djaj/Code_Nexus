@@ -90,7 +90,6 @@ class LogProcessor(DataProcessor):
         if not self.validate(data):
             raise ValueError("Improper log data")
         
-        # Helper to format the dictionary based on the subject's example output
         def format_log(log_dict: dict[str, str]) -> str:
             level = log_dict.get('log_level', 'UNKNOWN')
             msg = log_dict.get('log_message', '')
@@ -113,7 +112,6 @@ if __name__ == "__main__":
 
     print("Test invalid ingestion of string 'foo' without prior validation:")
     try:
-        # This will trigger a mypy warning on purpose as requested by the subject
         num_proc.ingest("foo") # type: ignore
     except Exception as e:
         print(f"Got exception: {e}")
@@ -126,7 +124,6 @@ if __name__ == "__main__":
         rank, val = num_proc.output()
         print(f"Numeric value {rank}: {val}")
 
-    # 2. Text Processor Tests
     print("\nTesting Text Processor...")
     text_proc = TextProcessor()
     print(f"Trying to validate input '42': {text_proc.validate(42)}")
@@ -138,7 +135,7 @@ if __name__ == "__main__":
     rank, val = text_proc.output()
     print(f"Text value {rank}: {val}")    
 
-    # 3. Log Processor Tests
+
     print("\nTesting Log Processor...")
     log_proc = LogProcessor()
     print(f"Trying to validate input 'Hello': {log_proc.validate('Hello')}")
