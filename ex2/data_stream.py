@@ -1,29 +1,34 @@
-from abc import ABC, abstractmethod
 import typing
 from typing import Any
-
+import json
 
 
 class DataProcessor(typing.Protocol):
-    """Abstract base class for all data processors."""
+    """Protocol defining the required behaviors and attributes for processors."""
+    _storage: list[str]
+    _rank: int
 
     def validate(self, data: Any) -> bool:
-        """Checks whether the input data are appropriate for the processor."""
         ...
 
     def ingest(self, data: Any) -> None:
-        """Processes and stores the input data. Raises Exception if invalid."""
         ...
-    
+
+    def output(self) -> tuple[int, str]:
+        ...
+
+class ExportPlugin(typing.Protocol):
+    """Protocol defining the required behaviors for export plugins."""
+    def process_output(self, data: list[tuple[int, str]]) -> None:
+        ...
+
 
 class NumericProcessor:
-    """Processes int, float, and lists of ints/floats."""
     def __init__(self) -> None:
         self._storage: list[str] = []
         self._rank: int = 0
 
     def validate(self, data: Any) -> bool:
-        # Note: In Python, bool is a subclass of int. We must explicitly exclude it.
         if isinstance(data, (int, float)) and not isinstance(data, bool):
             return True
         if isinstance(data, list):
@@ -33,7 +38,6 @@ class NumericProcessor:
     def ingest(self, data: int | float | list[int | float]) -> None:
         if not self.validate(data):
             raise ValueError("Improper numeric data")
-
         if isinstance(data, list):
             for item in data:
                 self._storage.append(str(item))
@@ -41,10 +45,8 @@ class NumericProcessor:
             self._storage.append(str(data))
 
     def output(self) -> tuple[int, str]:
-        """Extracts the oldest piece of data and its processing rank."""
         if not self._storage:
             raise IndexError("Storage is empty")
-        # Pop the oldest item (index 0)
         oldest_data = self._storage.pop(0)
         current_rank = self._rank
         self._rank += 1
@@ -52,8 +54,6 @@ class NumericProcessor:
 
 
 class TextProcessor:
-    """Processes str and lists of strings."""
-
     def __init__(self) -> None:
         self._storage: list[str] = []
         self._rank: int = 0
@@ -68,7 +68,6 @@ class TextProcessor:
     def ingest(self, data: str | list[str]) -> None:
         if not self.validate(data):
             raise ValueError("Improper text data")
-
         if isinstance(data, list):
             for item in data:
                 self._storage.append(str(item))
@@ -76,10 +75,8 @@ class TextProcessor:
             self._storage.append(str(data))
 
     def output(self) -> tuple[int, str]:
-        """Extracts the oldest piece of data and its processing rank."""
         if not self._storage:
             raise IndexError("Storage is empty")
-        # Pop the oldest item (index 0)
         oldest_data = self._storage.pop(0)
         current_rank = self._rank
         self._rank += 1
@@ -87,8 +84,6 @@ class TextProcessor:
 
 
 class LogProcessor:
-    """Processes dict of string key-value pairs, and lists of those dicts."""
-
     def __init__(self) -> None:
         self._storage: list[str] = []
         self._rank: int = 0
@@ -106,8 +101,6 @@ class LogProcessor:
     def ingest(self, data: dict[str, str] | list[dict[str, str]]) -> None:
         if not self.validate(data):
             raise ValueError("Improper log data")
-        
-        # Helper to format the dictionary based on the subject's example output
         def format_log(log_dict: dict[str, str]) -> str:
             level = log_dict.get('log_level', 'UNKNOWN')
             msg = log_dict.get('log_message', '')
@@ -120,75 +113,89 @@ class LogProcessor:
             self._storage.append(format_log(data))
 
     def output(self) -> tuple[int, str]:
-        """Extracts the oldest piece of data and its processing rank."""
         if not self._storage:
             raise IndexError("Storage is empty")
-        # Pop the oldest item (index 0)
         oldest_data = self._storage.pop(0)
         current_rank = self._rank
         self._rank += 1
         return (current_rank, oldest_data)
 
 
-class DataStream:
-    """Manages a stream of data and routes it to registered processors."""
+class CSVExportPlugin:
+    """Formats data as a comma-separated string."""
+    def process_output(self, data: list[tuple[int, str]]) -> None:
+        if not data:
+            return
+        print("CSV Output:")
+        formatted_csv = ",".join([item[1] for item in data])
+        print(formatted_csv)
 
+
+class JSONExportPlugin:
+    """Formats data as a JSON dictionary string based on rank."""
+    def process_output(self, data: list[tuple[int, str]]) -> None:
+        if not data:
+            return
+        print("JSON Output:")
+        json_dict = {f"item_{item[0]}": item[1] for item in data}
+        print(json.dumps(json_dict))
+
+
+class DataStream:
     def __init__(self) -> None:
         self._processors: list[DataProcessor] = []
 
     def register_processor(self, proc: DataProcessor) -> None:
-        """Registers a new processor to handle data in the stream."""
         self._processors.append(proc)
 
     def process_stream(self, stream: list[typing.Any]) -> None:
-        """Routes each element to the first capable processor."""
         for item in stream:
             handled = False
             for proc in self._processors:
                 if proc.validate(item):
                     proc.ingest(item)
                     handled = True
-                    break  # Stop checking other processors once handled
-
+                    break  
             if not handled:
                 print(f"DataStream error - Can't process element in stream: {item}")
-            
-    def print_processors_stats(self) -> None:
-        """Prints statistics for all registered processors."""
-        print("== DataStream statistics ==")
 
+    def print_processors_stats(self) -> None:
+        print("== DataStream statistics ==")
         if not self._processors:
             print("No processor found, no data")
             return
-
         for proc in self._processors:
             remaining = len(proc._storage)
             total = remaining + proc._rank
-
-            # Formats names like "NumericProcessor" to "Numeric Processor"
             proc_name = proc.__class__.__name__.replace("Processor", " Processor")
             print(f"{proc_name}: total {total} items processed, remaining {remaining} on processor")
-        
-        def output_pipeline(self, nb: int, plugin: ExportPlugin) -> None:
             
+    def output_pipeline(self, nb: int, plugin: ExportPlugin) -> None:
+        """Extracts elements ONE PROCESSOR AT A TIME and sends to plugin."""
+        for proc in self._processors:
+            collected_data: list[tuple[int, str]] = []
+            
+            for _ in range(nb):
+                if not proc._storage:
+                    break
+                collected_data.append(proc.output())
+                
+            if collected_data:
+                plugin.process_output(collected_data)
 
-class ExportPlugin(DataProcessor):
-    
-	def process_output(self, data: list[tuple[int, str]]) -> None:
-        
-    
+
 if __name__ == "__main__":
-    print("=== Code Nexus - Data Stream ===")
-
-    print("Initialize Data Stream...")
+    print("=== Code Nexus - Data Pipeline ===")
+    print("\nInitialize Data Stream...\n")
     stream = DataStream()
     stream.print_processors_stats()
-
-    print("Registering Numeric Processor")
-    num_proc = NumericProcessor()
-    stream.register_processor(num_proc)
-
-    batch = [
+    
+    print("\nRegistering Processors\n")
+    stream.register_processor(NumericProcessor())
+    stream.register_processor(TextProcessor())
+    stream.register_processor(LogProcessor())
+    
+    batch_1 = [
         'Hello world', 
         [3.14, -1, 2.71], 
         [{'log_level': 'WARNING', 'log_message': 'Telnet access! Use ssh instead'}, 
@@ -196,28 +203,34 @@ if __name__ == "__main__":
         42, 
         ['Hi', 'five']
     ]
-
-    print(f"Send first batch of data on stream: {batch}")
-    stream.process_stream(batch)
-
+    
+    print(f"Send first batch of data on stream: {batch_1}\n")
+    stream.process_stream(batch_1)
+    
     stream.print_processors_stats()
-
-    print("Registering other data processors")
-    text_proc = TextProcessor()
-    log_proc = LogProcessor()
-    stream.register_processor(text_proc)
-    stream.register_processor(log_proc)
-
-    print("Send the same batch again")
-    stream.process_stream(batch)
+    
+    print("\nSend 3 processed data from each processor to a CSV plugin:")
+    csv_plugin = CSVExportPlugin()
+    stream.output_pipeline(3, csv_plugin)
+    
     stream.print_processors_stats()
-
-    print("Consume some elements from the data processors: Numeric 3, Text 2, Log 1")
-    for _ in range(3):
-        num_proc.output()
-    for _ in range(2):
-        text_proc.output()
-    for _ in range(1):
-        log_proc.output()
-
+    
+    batch_2 = [
+        21, 
+        ['I love AI', 'LLMs are wonderful', 'Stay healthy'], 
+        [{'log_level': 'ERROR', 'log_message': '500 server crash'}, 
+         {'log_level': 'NOTICE', 'log_message': 'Certificate expires in 10 days'}], 
+        [32, 42, 64, 84, 128, 168], 
+        'World hello'
+    ]
+    
+    print(f"\nSend another batch of data: {batch_2}")
+    stream.process_stream(batch_2)
+    
+    stream.print_processors_stats()
+    
+    print("\nSend 5 processed data from each processor to a JSON plugin:")
+    json_plugin = JSONExportPlugin()
+    stream.output_pipeline(5, json_plugin)
+    
     stream.print_processors_stats()

@@ -35,7 +35,6 @@ class NumericProcessor(DataProcessor):
     """Processes int, float, and lists of ints/floats."""
     
     def validate(self, data: Any) -> bool:
-        # Note: In Python, bool is a subclass of int. We must explicitly exclude it.
         if isinstance(data, (int, float)) and not isinstance(data, bool):
             return True
         if isinstance(data, list):
@@ -91,7 +90,6 @@ class LogProcessor(DataProcessor):
         if not self.validate(data):
             raise ValueError("Improper log data")
         
-        # Helper to format the dictionary based on the subject's example output
         def format_log(log_dict: dict[str, str]) -> str:
             level = log_dict.get('log_level', 'UNKNOWN')
             msg = log_dict.get('log_message', '')
@@ -122,8 +120,7 @@ class DataStream:
                 if proc.validate(item):
                     proc.ingest(item)
                     handled = True
-                    break  # Stop checking other processors once handled
-
+                    break
             if not handled:
                 print(f"DataStream error - Can't process element in stream: {item}")
 
@@ -139,7 +136,6 @@ class DataStream:
             remaining = len(proc._storage)
             total = remaining + proc._rank
 
-            # Formats names like "NumericProcessor" to "Numeric Processor"
             proc_name = proc.__class__.__name__.replace("Processor", " Processor")
             print(f"{proc_name}: total {total} items processed, remaining {remaining} on processor")
 
@@ -147,11 +143,11 @@ class DataStream:
 if __name__ == "__main__":
     print("=== Code Nexus - Data Stream ===")
 
-    print("Initialize Data Stream...")
+    print("\nInitialize Data Stream...")
     stream = DataStream()
     stream.print_processors_stats()
 
-    print("Registering Numeric Processor")
+    print("\nRegistering Numeric Processor")
     num_proc = NumericProcessor()
     stream.register_processor(num_proc)
 
@@ -164,22 +160,22 @@ if __name__ == "__main__":
         ['Hi', 'five']
     ]
 
-    print(f"Send first batch of data on stream: {batch}")
+    print(f"\nSend first batch of data on stream: {batch}")
     stream.process_stream(batch)
 
     stream.print_processors_stats()
 
-    print("Registering other data processors")
+    print("\nRegistering other data processors")
     text_proc = TextProcessor()
     log_proc = LogProcessor()
     stream.register_processor(text_proc)
     stream.register_processor(log_proc)
 
-    print("Send the same batch again")
+    print("\nSend the same batch again")
     stream.process_stream(batch)
     stream.print_processors_stats()
 
-    print("Consume some elements from the data processors: Numeric 3, Text 2, Log 1")
+    print("\nConsume some elements from the data processors: Numeric 3, Text 2, Log 1")
     for _ in range(3):
         num_proc.output()
     for _ in range(2):

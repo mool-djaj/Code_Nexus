@@ -34,7 +34,6 @@ class NumericProcessor(DataProcessor):
     """Processes int, float, and lists of ints/floats."""
     
     def validate(self, data: Any) -> bool:
-        # Note: In Python, bool is a subclass of int. We must explicitly exclude it.
         if isinstance(data, (int, float)) and not isinstance(data, bool):
             return True
         if isinstance(data, list):
