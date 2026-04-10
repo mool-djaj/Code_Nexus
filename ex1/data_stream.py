@@ -5,7 +5,7 @@ from typing import Any
 
 class DataProcessor(ABC):
     """Abstract base class for all data processors."""
-    
+
     def __init__(self) -> None:
         self._storage: list[str] = []
         self._rank: int = 0
@@ -33,12 +33,14 @@ class DataProcessor(ABC):
 
 class NumericProcessor(DataProcessor):
     """Processes int, float, and lists of ints/floats."""
-    
+
     def validate(self, data: Any) -> bool:
         if isinstance(data, (int, float)) and not isinstance(data, bool):
             return True
         if isinstance(data, list):
-            return all(isinstance(x, (int, float)) and not isinstance(x, bool) for x in data)
+            return all(
+                isinstance(x, (int, float)) and not isinstance(x, bool)
+                for x in data)
         return False
 
     def ingest(self, data: int | float | list[int | float]) -> None:
@@ -54,7 +56,7 @@ class NumericProcessor(DataProcessor):
 
 class TextProcessor(DataProcessor):
     """Processes str and lists of strings."""
-    
+
     def validate(self, data: Any) -> bool:
         if isinstance(data, str):
             return True
@@ -65,7 +67,7 @@ class TextProcessor(DataProcessor):
     def ingest(self, data: str | list[str]) -> None:
         if not self.validate(data):
             raise ValueError("Improper text data")
-        
+
         if isinstance(data, list):
             for item in data:
                 self._storage.append(str(item))
@@ -74,11 +76,15 @@ class TextProcessor(DataProcessor):
 
 
 class LogProcessor(DataProcessor):
-    """Processes dict of string key-value pairs, and lists of those dicts."""
-    
+    """Processes dict of string key-value pairs, and lists of those
+    dicts."""
+
     def validate(self, data: Any) -> bool:
+
         def is_valid_dict(d: Any) -> bool:
-            return isinstance(d, dict) and all(isinstance(k, str) and isinstance(v, str) for k, v in d.items())
+            return isinstance(d, dict) and all(
+                isinstance(k, str) and isinstance(v, str)
+                for k, v in d.items())
 
         if is_valid_dict(data):
             return True
@@ -86,10 +92,12 @@ class LogProcessor(DataProcessor):
             return all(is_valid_dict(x) for x in data)
         return False
 
-    def ingest(self, data: dict[str, str] | list[dict[str, str]]) -> None:
+    def ingest(
+            self,
+            data: dict[str, str] | list[dict[str, str]]) -> None:
         if not self.validate(data):
             raise ValueError("Improper log data")
-        
+
         def format_log(log_dict: dict[str, str]) -> str:
             level = log_dict.get('log_level', 'UNKNOWN')
             msg = log_dict.get('log_message', '')
@@ -122,7 +130,9 @@ class DataStream:
                     handled = True
                     break
             if not handled:
-                print(f"DataStream error - Can't process element in stream: {item}")
+                print(
+                    f"DataStream error - Can't process element "
+                    f"in stream: {item}")
 
     def print_processors_stats(self) -> None:
         """Prints statistics for all registered processors."""
@@ -136,8 +146,11 @@ class DataStream:
             remaining = len(proc._storage)
             total = remaining + proc._rank
 
-            proc_name = proc.__class__.__name__.replace("Processor", " Processor")
-            print(f"{proc_name}: total {total} items processed, remaining {remaining} on processor")
+            proc_name = proc.__class__.__name__.replace(
+                "Processor", " Processor")
+            print(
+                f"{proc_name}: total {total} items processed, "
+                f"remaining {remaining} on processor")
 
 
 if __name__ == "__main__":
@@ -152,11 +165,13 @@ if __name__ == "__main__":
     stream.register_processor(num_proc)
 
     batch = [
-        'Hello world', 
-        [3.14, -1, 2.71], 
-        [{'log_level': 'WARNING', 'log_message': 'Telnet access! Use ssh instead'}, 
-         {'log_level': 'INFO', 'log_message': 'User wil is connected'}], 
-        42, 
+        'Hello world',
+        [3.14, -1, 2.71],
+        [{'log_level': 'WARNING',
+          'log_message': 'Telnet access! Use ssh instead'},
+         {'log_level': 'INFO',
+          'log_message': 'User wil is connected'}],
+        42,
         ['Hi', 'five']
     ]
 
@@ -175,7 +190,9 @@ if __name__ == "__main__":
     stream.process_stream(batch)
     stream.print_processors_stats()
 
-    print("\nConsume some elements from the data processors: Numeric 3, Text 2, Log 1")
+    print(
+        "\nConsume some elements from the data processors: "
+        "Numeric 3, Text 2, Log 1")
     for _ in range(3):
         num_proc.output()
     for _ in range(2):

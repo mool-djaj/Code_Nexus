@@ -4,7 +4,7 @@ from typing import Any
 
 class DataProcessor(ABC):
     """Abstract base class for all data processors."""
-    
+
     def __init__(self) -> None:
         self._storage: list[str] = []
         self._rank: int = 0
@@ -32,12 +32,14 @@ class DataProcessor(ABC):
 
 class NumericProcessor(DataProcessor):
     """Processes int, float, and lists of ints/floats."""
-    
+
     def validate(self, data: Any) -> bool:
         if isinstance(data, (int, float)) and not isinstance(data, bool):
             return True
         if isinstance(data, list):
-            return all(isinstance(x, (int, float)) and not isinstance(x, bool) for x in data)
+            return all(
+                isinstance(x, (int, float)) and not isinstance(x, bool)
+                for x in data)
         return False
 
     def ingest(self, data: int | float | list[int | float]) -> None:
@@ -53,7 +55,7 @@ class NumericProcessor(DataProcessor):
 
 class TextProcessor(DataProcessor):
     """Processes str and lists of strings."""
-    
+
     def validate(self, data: Any) -> bool:
         if isinstance(data, str):
             return True
@@ -64,7 +66,7 @@ class TextProcessor(DataProcessor):
     def ingest(self, data: str | list[str]) -> None:
         if not self.validate(data):
             raise ValueError("Improper text data")
-        
+
         if isinstance(data, list):
             for item in data:
                 self._storage.append(str(item))
@@ -73,11 +75,15 @@ class TextProcessor(DataProcessor):
 
 
 class LogProcessor(DataProcessor):
-    """Processes dict of string key-value pairs, and lists of those dicts."""
-    
+    """Processes dict of string key-value pairs, and lists of those
+    dicts."""
+
     def validate(self, data: Any) -> bool:
+
         def is_valid_dict(d: Any) -> bool:
-            return isinstance(d, dict) and all(isinstance(k, str) and isinstance(v, str) for k, v in d.items())
+            return isinstance(d, dict) and all(
+                isinstance(k, str) and isinstance(v, str)
+                for k, v in d.items())
 
         if is_valid_dict(data):
             return True
@@ -85,10 +91,12 @@ class LogProcessor(DataProcessor):
             return all(is_valid_dict(x) for x in data)
         return False
 
-    def ingest(self, data: dict[str, str] | list[dict[str, str]]) -> None:
+    def ingest(
+            self,
+            data: dict[str, str] | list[dict[str, str]]) -> None:
         if not self.validate(data):
             raise ValueError("Improper log data")
-        
+
         def format_log(log_dict: dict[str, str]) -> str:
             level = log_dict.get('log_level', 'UNKNOWN')
             msg = log_dict.get('log_message', '')
@@ -111,11 +119,11 @@ if __name__ == "__main__":
 
     print("Test invalid ingestion of string 'foo' without prior validation:")
     try:
-        num_proc.ingest("foo") # type: ignore
+        num_proc.ingest("foo")  # type: ignore
     except Exception as e:
         print(f"Got exception: {e}")
 
-    num_list = [1, 2, 3, 4, 5]
+    num_list: list[int | float] = [1, 2, 3, 4, 5]
     print(f"Processing data: {num_list}")
     num_proc.ingest(num_list)
     print("Extracting 3 values...")
@@ -125,6 +133,7 @@ if __name__ == "__main__":
 
     print("\nTesting Text Processor...")
     text_proc = TextProcessor()
+    print(f"Trying to validate input 'Hello': {text_proc.validate('Hello')}")
     print(f"Trying to validate input '42': {text_proc.validate(42)}")
 
     text_list = ['Hello', 'Nexus', 'World']
@@ -132,13 +141,16 @@ if __name__ == "__main__":
     text_proc.ingest(text_list)
     print("Extracting 1 value...")
     rank, val = text_proc.output()
-    print(f"Text value {rank}: {val}")    
-
+    print(f"Text value {rank}: {val}")
 
     print("\nTesting Log Processor...")
     log_proc = LogProcessor()
+    print(
+        "Trying to validate input "
+        f"'{{\'log_level\': \'INFO\', \'log_message\': \'ok\'}}': "
+        f"{log_proc.validate({'log_level': 'INFO', 'log_message': 'ok'})}")
     print(f"Trying to validate input 'Hello': {log_proc.validate('Hello')}")
-    
+
     log_data = [
         {'log_level': 'NOTICE', 'log_message': 'Connection to server'},
         {'log_level': 'ERROR', 'log_message': 'Unauthorized access!!'}
