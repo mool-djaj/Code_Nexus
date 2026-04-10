@@ -3,6 +3,7 @@ import typing
 from typing import Any
 
 
+
 class DataProcessor(typing.Protocol):
     """Abstract base class for all data processors."""
 
@@ -13,7 +14,7 @@ class DataProcessor(typing.Protocol):
     def ingest(self, data: Any) -> None:
         """Processes and stores the input data. Raises Exception if invalid."""
         ...
-
+    
 
 class NumericProcessor:
     """Processes int, float, and lists of ints/floats."""
@@ -151,7 +152,7 @@ class DataStream:
 
             if not handled:
                 print(f"DataStream error - Can't process element in stream: {item}")
-
+            
     def print_processors_stats(self) -> None:
         """Prints statistics for all registered processors."""
         print("== DataStream statistics ==")
@@ -167,8 +168,15 @@ class DataStream:
             # Formats names like "NumericProcessor" to "Numeric Processor"
             proc_name = proc.__class__.__name__.replace("Processor", " Processor")
             print(f"{proc_name}: total {total} items processed, remaining {remaining} on processor")
+        
+        def output_pipeline(self, nb: int, plugin: ExportPlugin) -> None:
+            
 
-
+class ExportPlugin(DataProcessor):
+    
+	def process_output(self, data: list[tuple[int, str]]) -> None:
+        
+    
 if __name__ == "__main__":
     print("=== Code Nexus - Data Stream ===")
 
