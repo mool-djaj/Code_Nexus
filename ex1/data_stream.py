@@ -34,13 +34,16 @@ class NumericProcessor(DataProcessor):
     """Processes int, float, and lists of ints/floats."""
 
     def validate(self, data: Any) -> bool:
-        if isinstance(data, (int, float)) and not isinstance(data, bool):
-            return True
-        if isinstance(data, list):
-            return all(
-                isinstance(x, (int, float)) and not isinstance(x, bool)
-                for x in data)
-        return False
+        try:
+            if isinstance(data, (int, float)) and not isinstance(data, bool):
+                return True
+            if isinstance(data, list):
+                return all(
+                    isinstance(x, (int, float)) and not isinstance(x, bool)
+                    for x in data)
+            return False
+        except (Exception):
+            return False
 
     def ingest(self, data: int | float | list[int | float]) -> None:
         if not self.validate(data):
@@ -57,11 +60,14 @@ class TextProcessor(DataProcessor):
     """Processes str and lists of strings."""
 
     def validate(self, data: Any) -> bool:
-        if isinstance(data, str):
-            return True
-        if isinstance(data, list):
-            return all(isinstance(x, str) for x in data)
-        return False
+        try:
+            if isinstance(data, str):
+                return True
+            if isinstance(data, list):
+                return all(isinstance(x, str) for x in data)
+            return False
+        except (Exception):
+            return False
 
     def ingest(self, data: str | list[str]) -> None:
         if not self.validate(data):
@@ -85,11 +91,14 @@ class LogProcessor(DataProcessor):
                 isinstance(k, str) and isinstance(v, str)
                 for k, v in d.items())
 
-        if is_valid_dict(data):
-            return True
-        if isinstance(data, list):
-            return all(is_valid_dict(x) for x in data)
-        return False
+        try:
+            if is_valid_dict(data):
+                return True
+            if isinstance(data, list):
+                return all(is_valid_dict(x) for x in data)
+            return False
+        except (Exception):
+            return False
 
     def ingest(
             self,
@@ -165,7 +174,7 @@ if __name__ == "__main__":
 
     batch = [
         'Hello world',
-        [3.14, -1, 2.71],
+        [3.14, "1", 2.71],
         [{'log_level': 'WARNING',
           'log_message': 'Telnet access! Use ssh instead'},
          {'log_level': 'INFO',
@@ -191,8 +200,8 @@ if __name__ == "__main__":
 
     print(
         "\nConsume some elements from the data processors: "
-        "Numeric 3, Text 2, Log 1")
-    for _ in range(3):
+        "Numeric 2, Text 2, Log 1")
+    for _ in range(2):
         num_proc.output()
     for _ in range(2):
         text_proc.output()

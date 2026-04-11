@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import Any , Protocol
+from typing import Any, Protocol
 
 
 class DataProcessor(ABC):
@@ -38,13 +38,16 @@ class ExportPlugin(Protocol):
 class NumericProcessor(DataProcessor):
 
     def validate(self, data: Any) -> bool:
-        if isinstance(data, (int, float)) and not isinstance(data, bool):
-            return True
-        if isinstance(data, list):
-            return all(
-                isinstance(x, (int, float)) and not isinstance(x, bool)
-                for x in data)
-        return False
+        try:
+            if isinstance(data, (int, float)) and not isinstance(data, bool):
+                return True
+            if isinstance(data, list):
+                return all(
+                    isinstance(x, (int, float)) and not isinstance(x, bool)
+                    for x in data)
+            return False
+        except (Exception):
+            return False
 
     def ingest(self, data: int | float | list[int | float]) -> None:
         if not self.validate(data):
@@ -59,11 +62,14 @@ class NumericProcessor(DataProcessor):
 class TextProcessor(DataProcessor):
 
     def validate(self, data: Any) -> bool:
-        if isinstance(data, str):
-            return True
-        if isinstance(data, list):
-            return all(isinstance(x, str) for x in data)
-        return False
+        try:
+            if isinstance(data, str):
+                return True
+            if isinstance(data, list):
+                return all(isinstance(x, str) for x in data)
+            return False
+        except (Exception):
+            return False
 
     def ingest(self, data: str | list[str]) -> None:
         if not self.validate(data):
@@ -84,11 +90,14 @@ class LogProcessor(DataProcessor):
                 isinstance(k, str) and isinstance(v, str)
                 for k, v in d.items())
 
-        if is_valid_dict(data):
-            return True
-        if isinstance(data, list):
-            return all(is_valid_dict(x) for x in data)
-        return False
+        try:
+            if is_valid_dict(data):
+                return True
+            if isinstance(data, list):
+                return all(is_valid_dict(x) for x in data)
+            return False
+        except (Exception):
+            return False
 
     def ingest(
             self,

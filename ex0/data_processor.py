@@ -33,13 +33,16 @@ class NumericProcessor(DataProcessor):
     """Processes int, float, and lists of ints/floats."""
 
     def validate(self, data: Any) -> bool:
-        if isinstance(data, (int, float)) and not isinstance(data, bool):
-            return True
-        if isinstance(data, list):
-            return all(
-                isinstance(x, (int, float)) and not isinstance(x, bool)
-                for x in data)
-        return False
+        try:
+            if isinstance(data, (int, float)) and not isinstance(data, bool):
+                return True
+            if isinstance(data, list):
+                return all(
+                    isinstance(x, (int, float)) and not isinstance(x, bool)
+                    for x in data)
+            return False
+        except (Exception):
+            return False
 
     def ingest(self, data: int | float | list[int | float]) -> None:
         if not self.validate(data):
@@ -56,11 +59,14 @@ class TextProcessor(DataProcessor):
     """Processes str and lists of strings."""
 
     def validate(self, data: Any) -> bool:
-        if isinstance(data, str):
-            return True
-        if isinstance(data, list):
-            return all(isinstance(x, str) for x in data)
-        return False
+        try:
+            if isinstance(data, str):
+                return True
+            if isinstance(data, list):
+                return all(isinstance(x, str) for x in data)
+            return False
+        except (Exception):
+            return False
 
     def ingest(self, data: str | list[str]) -> None:
         if not self.validate(data):
@@ -84,11 +90,14 @@ class LogProcessor(DataProcessor):
                 isinstance(k, str) and isinstance(v, str)
                 for k, v in d.items())
 
-        if is_valid_dict(data):
-            return True
-        if isinstance(data, list):
-            return all(is_valid_dict(x) for x in data)
-        return False
+        try:
+            if is_valid_dict(data):
+                return True
+            if isinstance(data, list):
+                return all(is_valid_dict(x) for x in data)
+            return False
+        except (Exception):
+            return False
 
     def ingest(
             self,
@@ -118,15 +127,23 @@ if __name__ == "__main__":
 
     print("Test invalid ingestion of string 'foo' without prior validation:")
     try:
-        num_proc.ingest("foo")  # type: ignore
+        bad_input: Any = "foo"
+        num_proc.ingest(bad_input)
     except Exception as e:
         print(f"Got exception: {e}")
 
-    num_list: list[int | float] = [1, 2, 3, 4, 5]
+    num_list: Any = [1, 2, 3, "4", 5]
     print(f"Processing data: {num_list}")
+    try:
+        num_proc.ingest(num_list)
+    except Exception as e:
+        print(f"Got exception: {e}")
+
+    num_list = [1, 2, 3, 4, 5]
+    print(f"Processing valid data: {num_list}")
     num_proc.ingest(num_list)
-    print("Extracting 3 values...")
-    for _ in range(3):
+    print(f"Extracting {len(num_list)} values...")
+    for _ in range(len(num_list)):
         rank, val = num_proc.output()
         print(f"Numeric value {rank}: {val}")
 
@@ -152,11 +169,11 @@ if __name__ == "__main__":
 
     log_data = [
         {'log_level': 'NOTICE', 'log_message': 'Connection to server'},
-        {'log_level': 'ERROR', 'log_message': 'Unauthorized access!!'}
+        {'log_level': 'ERROR', 'log_message': 'Unauthorized access!!'},
     ]
     print(f"Processing data: {log_data}")
     log_proc.ingest(log_data)
-    print("Extracting 2 values...")
-    for _ in range(2):
+    print(f"Extracting {len(log_data)} values...")
+    for _ in range(len(log_data)):
         rank, val = log_proc.output()
         print(f"Log entry {rank}: {val}")
