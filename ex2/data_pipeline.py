@@ -1,21 +1,33 @@
+from abc import ABC, abstractmethod
 import typing
 from typing import Any
 
 
-class DataProcessor(typing.Protocol):
-    """Protocol defining the required behaviors and attributes for
-    processors."""
-    _storage: list[str]
-    _rank: int
+class DataProcessor(ABC):
+    """Abstract base class for all data processors."""
 
+    def __init__(self) -> None:
+        self._storage: list[str] = []
+        self._rank: int = 0
+
+    @abstractmethod
     def validate(self, data: Any) -> bool:
-        ...
+        """Checks whether the input data are appropriate for the processor."""
+        pass
 
+    @abstractmethod
     def ingest(self, data: Any) -> None:
-        ...
+        """Processes and stores the input data. Raises Exception if invalid."""
+        pass
 
     def output(self) -> tuple[int, str]:
-        ...
+        """Extracts the oldest piece of data and its processing rank."""
+        if not self._storage:
+            raise IndexError("Storage is empty")
+        oldest_data = self._storage.pop(0)
+        current_rank = self._rank
+        self._rank += 1
+        return (current_rank, oldest_data)
 
 
 class ExportPlugin(typing.Protocol):
@@ -24,10 +36,7 @@ class ExportPlugin(typing.Protocol):
         ...
 
 
-class NumericProcessor:
-    def __init__(self) -> None:
-        self._storage: list[str] = []
-        self._rank: int = 0
+class NumericProcessor(DataProcessor):
 
     def validate(self, data: Any) -> bool:
         if isinstance(data, (int, float)) and not isinstance(data, bool):
@@ -47,19 +56,8 @@ class NumericProcessor:
         else:
             self._storage.append(str(data))
 
-    def output(self) -> tuple[int, str]:
-        if not self._storage:
-            raise IndexError("Storage is empty")
-        oldest_data = self._storage.pop(0)
-        current_rank = self._rank
-        self._rank += 1
-        return (current_rank, oldest_data)
 
-
-class TextProcessor:
-    def __init__(self) -> None:
-        self._storage: list[str] = []
-        self._rank: int = 0
+class TextProcessor(DataProcessor):
 
     def validate(self, data: Any) -> bool:
         if isinstance(data, str):
@@ -77,19 +75,8 @@ class TextProcessor:
         else:
             self._storage.append(str(data))
 
-    def output(self) -> tuple[int, str]:
-        if not self._storage:
-            raise IndexError("Storage is empty")
-        oldest_data = self._storage.pop(0)
-        current_rank = self._rank
-        self._rank += 1
-        return (current_rank, oldest_data)
 
-
-class LogProcessor:
-    def __init__(self) -> None:
-        self._storage: list[str] = []
-        self._rank: int = 0
+class LogProcessor(DataProcessor):
 
     def validate(self, data: Any) -> bool:
 
@@ -120,14 +107,6 @@ class LogProcessor:
                 self._storage.append(format_log(item))
         else:
             self._storage.append(format_log(data))
-
-    def output(self) -> tuple[int, str]:
-        if not self._storage:
-            raise IndexError("Storage is empty")
-        oldest_data = self._storage.pop(0)
-        current_rank = self._rank
-        self._rank += 1
-        return (current_rank, oldest_data)
 
 
 class CSVExportPlugin:
