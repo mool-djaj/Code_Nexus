@@ -1,6 +1,5 @@
 from abc import ABC, abstractmethod
-import typing
-from typing import Any
+from typing import Any , Protocol
 
 
 class DataProcessor(ABC):
@@ -30,7 +29,7 @@ class DataProcessor(ABC):
         return (current_rank, oldest_data)
 
 
-class ExportPlugin(typing.Protocol):
+class ExportPlugin(Protocol):
     """Protocol defining the required behaviors for export plugins."""
     def process_output(self, data: list[tuple[int, str]]) -> None:
         ...
@@ -139,7 +138,7 @@ class DataStream:
     def register_processor(self, proc: DataProcessor) -> None:
         self._processors.append(proc)
 
-    def process_stream(self, stream: list[typing.Any]) -> None:
+    def process_stream(self, stream: list[Any]) -> None:
         for item in stream:
             handled = False
             for proc in self._processors:

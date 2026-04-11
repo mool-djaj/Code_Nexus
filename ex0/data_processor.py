@@ -23,7 +23,6 @@ class DataProcessor(ABC):
         """Extracts the oldest piece of data and its processing rank."""
         if not self._storage:
             raise IndexError("Storage is empty")
-        # Pop the oldest item (index 0)
         oldest_data = self._storage.pop(0)
         current_rank = self._rank
         self._rank += 1
